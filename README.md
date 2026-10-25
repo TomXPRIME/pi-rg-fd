@@ -55,6 +55,15 @@ Availability is resolved once, when the extension loads, by stating files on `PA
 
 `pi-cli-guard` and `pi-prefer-rg` rewrite or block bash commands when the model runs them. `pi-rg-fd` edits the system prompt Pi already built. Commands the model still emits run unchanged.
 
+## Compatibility
+
+With `@earendil-works/pi-coding-agent` installed, `npm run compat` builds Pi's default system prompt from that package and loads this extension through Pi's extension loader. CI runs the same check on Ubuntu and Windows against the latest Pi release, every day and on manual dispatch.
+
+```bash
+npm install --no-save @earendil-works/pi-coding-agent@latest
+npm run compat
+```
+
 ## License
 
 MIT

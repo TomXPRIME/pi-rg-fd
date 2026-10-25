@@ -31,7 +31,8 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "compat": "node scripts/compat.js"
   },
   "pi": {
     "extensions": [
