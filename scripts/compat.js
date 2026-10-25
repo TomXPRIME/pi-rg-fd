@@ -2,11 +2,9 @@
  * Check pi-rg-fd against the installed @earendil-works/pi-coding-agent.
  *
  * Reads the bash prompt contribution and default system prompt from that
- * package, loads this extension with Pi's loader, and runs before_agent_start
- * with rg and fd present on PATH.
+ * package, loads this extension with Pi's loader, and runs before_agent_start.
  */
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { BASH_RULE, BASH_SNIPPET } from "../prompt.js";
@@ -16,7 +14,6 @@ const REWRITTEN_RULE = "Use bash for file operations like ls, rg, fd";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const extensionPath = path.resolve(here, "../index.js");
-const bin = mkdtempSync(path.join(tmpdir(), "pi-rg-fd-compat-"));
 
 try {
 	const piRoot = locatePi();
@@ -40,14 +37,13 @@ try {
 	requireLine(prompt, BASH_SNIPPET, pi.version, "default system prompt");
 	requireLine(prompt, BASH_RULE, pi.version, "default system prompt");
 
-	placeTools(bin);
 	const loaded = await loadExtensions([extensionPath], path.dirname(extensionPath));
 	if (loaded.errors?.length) {
 		throw new Error(loaded.errors.map((entry) => `${entry.path}: ${entry.error}`).join("\n"));
 	}
 	const handlers = loaded.extensions[0]?.handlers.get("before_agent_start") ?? [];
 	if (handlers.length !== 1) {
-		throw new Error(`Pi loaded ${handlers.length} before_agent_start handlers; expected 1 (rg and fd on PATH).`);
+		throw new Error(`Pi loaded ${handlers.length} before_agent_start handlers; expected 1.`);
 	}
 
 	const result = await handlers[0]({ type: "before_agent_start", systemPrompt: prompt }, {});
@@ -70,8 +66,6 @@ try {
 } catch (error) {
 	console.error(error instanceof Error ? error.message : error);
 	process.exitCode = 1;
-} finally {
-	rmSync(bin, { recursive: true, force: true });
 }
 
 function locatePi() {
@@ -105,15 +99,4 @@ function requireLine(text, line, version, where) {
 	if (!text.includes(line)) {
 		throw new Error(`Pi ${version} ${where} is missing:\n${line}`);
 	}
-}
-
-function placeTools(dir) {
-	const windows = process.platform === "win32";
-	for (const name of windows ? ["rg.exe", "fd.exe"] : ["rg", "fd"]) {
-		const file = path.join(dir, name);
-		writeFileSync(file, "");
-		if (!windows) chmodSync(file, 0o755);
-	}
-	const current = process.env.PATH ?? "";
-	process.env.PATH = current ? `${dir}${path.delimiter}${current}` : dir;
 }

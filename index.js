@@ -1,17 +1,12 @@
-import { detectSearchTools, rewritePrompt } from "./prompt.js";
+import { rewritePrompt } from "./prompt.js";
 
 const CACHE_LIMIT = 8;
 
-/**
- * @param {{ rg: boolean, fd: "fd" | "fdfind" | null }} [tools]
- */
-export function createExtension(tools = detectSearchTools()) {
+export function createExtension() {
 	/** @type {Map<string, string>} */
 	const cache = new Map();
 
 	return function piRgFd(pi) {
-		if (!tools.rg && !tools.fd) return;
-
 		pi.on("before_agent_start", (event) => {
 			const input = event.systemPrompt;
 			if (typeof input !== "string") return;
@@ -21,7 +16,7 @@ export function createExtension(tools = detectSearchTools()) {
 				cache.delete(input);
 				cache.set(input, output);
 			} else {
-				output = rewritePrompt(input, tools);
+				output = rewritePrompt(input);
 				cache.set(input, output);
 				if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value);
 			}
