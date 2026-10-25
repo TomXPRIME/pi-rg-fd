@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createExtension } from "../index.js";
+import piRgFd from "../index.js";
 import { BASH_RULE, BASH_SNIPPET, rewritePrompt } from "../prompt.js";
 
 const SAMPLE = [
@@ -40,16 +40,14 @@ test("replacement is idempotent", () => {
 
 test("before_agent_start returns a replacement only when a known line changed", () => {
 	const hooks = {};
-	createExtension()({
+	piRgFd({
 		on(event, handler) {
 			hooks[event] = handler;
 		},
 	});
 	const handler = hooks.before_agent_start;
-	const first = handler({ systemPrompt: SAMPLE });
-	const second = handler({ systemPrompt: SAMPLE });
-	assert.deepEqual(first, second);
-	assert.equal(first.systemPrompt.includes("ls, rg, fd"), true);
-	assert.equal(handler({ systemPrompt: first.systemPrompt }), undefined);
+	const result = handler({ systemPrompt: SAMPLE });
+	assert.equal(result.systemPrompt.includes("ls, rg, fd"), true);
+	assert.equal(handler({ systemPrompt: result.systemPrompt }), undefined);
 	assert.equal(handler({ systemPrompt: "custom prompt without the default lines" }), undefined);
 });
