@@ -48,6 +48,10 @@ test("detects rg and fd on a POSIX PATH, including a later directory", () => {
 			rg: true,
 			fd: "fd",
 		});
+		assert.deepEqual(
+			detectSearchTools({ env: { PATH: `${path.join(root, "missing")}:${bin}` }, platform: "linux" }),
+			{ rg: true, fd: "fd" },
+		);
 		assert.deepEqual(detectSearchTools({ env: { PATH: empty }, platform: "linux" }), {
 			rg: false,
 			fd: null,
@@ -68,13 +72,20 @@ test("uses fdfind only when fd itself is absent", () => {
 		const both = path.join(root, "both");
 		mkdirSync(fdOnly);
 		mkdirSync(both);
+		const later = path.join(root, "later");
+		mkdirSync(later);
 		place(fdOnly, "fdfind");
+		place(later, "fd");
 		place(both, "fd");
 		place(both, "fdfind");
 
 		assert.deepEqual(detectSearchTools({ env: { PATH: fdOnly }, platform: "linux" }), {
 			rg: false,
 			fd: "fdfind",
+		});
+		assert.deepEqual(detectSearchTools({ env: { PATH: `${fdOnly}:${later}` }, platform: "linux" }), {
+			rg: false,
+			fd: "fd",
 		});
 		assert.deepEqual(detectSearchTools({ env: { PATH: both }, platform: "linux" }), {
 			rg: false,
@@ -88,7 +99,7 @@ test("uses fdfind only when fd itself is absent", () => {
 test("finds rg.exe and fd.exe on Windows, including PATHEXT", () => {
 	const root = mkdtempSync(path.join(tmpdir(), "pi-rg-fd-"));
 	try {
-		place(root, "rg.exe", 0o644);
+		place(root, "Rg.EXE", 0o644);
 		place(root, "fd.CMD", 0o644);
 		const other = path.join(root, "other");
 		mkdirSync(other);
@@ -111,6 +122,13 @@ test("finds rg.exe and fd.exe on Windows, including PATHEXT", () => {
 				platform: "win32",
 			}),
 			{ rg: false, fd: null },
+		);
+		assert.deepEqual(
+			detectSearchTools({
+				env: { PATH: bare, PATHEXT: ".;.EXE;.exe" },
+				platform: "win32",
+			}),
+			{ rg: true, fd: null },
 		);
 
 		assert.deepEqual(

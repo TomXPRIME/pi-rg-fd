@@ -37,7 +37,7 @@ Execute bash commands (ls, rg, fd, etc.)
 Use bash for file operations like ls, rg, fd
 ```
 
-Each binary is swapped on its own. `fd` is checked independently of `rg`. On Windows the scan accepts `rg.exe` and `fd.exe` (and the rest of `PATHEXT`). On Debian and Ubuntu, where the package installs `fdfind`, that name is used instead of `fd`.
+Each binary is swapped on its own. `fd` is checked independently of `rg`. On Windows the scan accepts `rg.exe` and `fd.exe` (and the rest of `PATHEXT`), matched case-insensitively. On Debian and Ubuntu, where the package installs `fdfind`, that name is used instead of `fd`. A later `fd` still wins over an earlier `fdfind`.
 
 | On PATH | Bash tool line | Guideline |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ Each binary is swapped on its own. `fd` is checked independently of `rg`. On Win
 
 `rg` and `fd` are shorter than `grep` and `find`. `fdfind` is two characters longer than `find`, which is the Debian binary's name. If neither line is present (a custom system prompt, or a future Pi release that rewords them), the hook returns without changing the prompt.
 
-Availability is resolved once, when the extension loads, by stating files on `PATH`. The `before_agent_start` hook is a string replace cached by the prompt text, so the same input always yields the same output.
+Availability is resolved once, when the extension loads, by listing each directory on `PATH` (stopping once `rg` and `fd` are both found). The `before_agent_start` hook is a string replace cached by the prompt text, so the same input always yields the same output.
 
 ## Prompt text only
 
