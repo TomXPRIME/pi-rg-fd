@@ -1,6 +1,6 @@
 {
   "name": "pi-rg-fd",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pi extension that rewrites the default grep/find prompt lines to rg and fd.",
   "type": "module",
   "main": "index.js",

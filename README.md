@@ -37,7 +37,7 @@ Execute bash commands (ls, rg, fd, etc.)
 Use bash for file operations like ls, rg, fd
 ```
 
-`rg` and `fd` are shorter than `grep` and `find`. If neither line is present (a custom system prompt, or a future Pi release that rewords them), the hook returns without changing the prompt. The `before_agent_start` hook is a string replace cached by the prompt text, so the same input always yields the same output.
+`rg` and `fd` are shorter than `grep` and `find`. If neither line is present (a custom system prompt, or a future Pi release that rewords them), the hook returns without changing the prompt.
 
 Pi's interactive mode downloads `rg` and `fd` when they are missing, into `~/.pi/agent/bin` (or `$PI_CODING_AGENT_DIR/bin` when that variable is set; a leading `~` is expanded). Bash calls see that directory on `PATH`. The managed files are named `rg` and `fd`, plus `.exe` on Windows.
 
