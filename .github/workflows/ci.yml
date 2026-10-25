@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      pi-version:
+        description: "@earendil-works/pi-coding-agent version (default latest)"
+        required: false
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+      - run: npm test
+
+  compat:
+    name: compat
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      pi-version: ${{ steps.pi.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+      - name: Resolve Pi version
+        id: pi
+        run: |
+          set -euo pipefail
+          spec="${{ github.event.inputs.pi-version }}"
+          if [ -z "$spec" ]; then spec=latest; fi
+          if ! printf '%s' "$spec" | grep -Eq '^(latest|[0-9A-Za-z.+_-]+)$'; then
+            echo "invalid pi-version: $spec" >&2
+            exit 1
+          fi
+          version=$(npm view "@earendil-works/pi-coding-agent@${spec}" version)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Pi $version"
+      - name: Restore compat marker
+        id: marker
+        if: github.event_name == 'schedule'
+        uses: actions/cache/restore@v4
+        with:
+          path: .pi-compat-ok
+          key: pi-rg-fd-compat-${{ steps.pi.outputs.version }}-${{ runner.os }}
+      - name: Compatibility
+        if: success() && (github.event_name != 'schedule' || steps.marker.outputs.cache-hit != 'true')
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts "@earendil-works/pi-coding-agent@${{ steps.pi.outputs.version }}"
+          npm run compat
+          echo ok > .pi-compat-ok
+      - name: Save compat marker
+        if: success() && github.event_name == 'schedule' && steps.marker.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .pi-compat-ok
+          key: pi-rg-fd-compat-${{ steps.pi.outputs.version }}-${{ runner.os }}
+
+  report:
+    needs: compat
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+      - name: Open or update issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PI_VERSION: ${{ needs.compat.outputs.pi-version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PI_SPEC: ${{ github.event.inputs.pi-version }}
+        run: |
+          set -euo pipefail
+          version="$PI_VERSION"
+          if [ -z "$version" ]; then
+            spec="${PI_SPEC:-latest}"
+            if ! printf '%s' "$spec" | grep -Eq '^(latest|[0-9A-Za-z.+_-]+)$'; then
+              spec=latest
+            fi
+            version=$(npm view "@earendil-works/pi-coding-agent@${spec}" version || true)
+          fi
+          if [ -z "$version" ]; then version=unknown; fi
+          title="Pi ${version} broke pi-rg-fd"
+          body=$(printf '@earendil-works/pi-coding-agent@%s failed the `compat` check.\n\nFailing check: compat\n%s\n' "$version" "$RUN_URL")
+          existing=$(gh issue list --state open --limit 100 --json number,title | ISSUE_TITLE="$title" node -e '
+            let data = "";
+            process.stdin.on("data", (chunk) => { data += chunk; });
+            process.stdin.on("end", () => {
+              const hit = JSON.parse(data).find((issue) => issue.title === process.env.ISSUE_TITLE);
+              if (hit) process.stdout.write(String(hit.number));
+            });
+          ')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$(printf 'Still failing.\n\nFailing check: compat\n%s\n' "$RUN_URL")"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

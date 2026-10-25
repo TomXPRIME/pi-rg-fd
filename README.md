@@ -1,8 +1,8 @@
 # pi-rg-fd
 
-Pi coding agent extension that rewrites the default system prompt's `grep` and `find` advice to `rg` and `fd` when those tools are on `PATH`.
+Pi coding agent extension that always rewrites the default system prompt's `grep` and `find` advice to `rg` and `fd`.
 
-Pi 1.4's bash tool line names `grep` and `find`, and the default guideline still names `find`, so models reach for those commands even when ripgrep and fd are installed. This package replaces those exact lines in place. The usual prompt gets shorter, and text that is not one of those Pi 1.4 lines is left as Pi wrote it.
+Pi 1.4's bash tool line names `grep` and `find`, and the default guideline still names `find`, so models reach for those commands. This package replaces those two exact lines in place. The usual prompt gets shorter, and text that is not one of those Pi 1.4 lines is left as Pi wrote it. You confirm that `rg` and `fd` run on your machine.
 
 ## Install
 
@@ -30,30 +30,35 @@ Default guideline (bash enabled, and the grep/find/ls tools off), before:
 Use bash for file operations like ls, rg, find
 ```
 
-With both `rg` and `fd` on `PATH`, those become:
+Those lines are always rewritten to:
 
 ```text
 Execute bash commands (ls, rg, fd, etc.)
 Use bash for file operations like ls, rg, fd
 ```
 
-Each binary is swapped on its own. `fd` is checked independently of `rg`. On Windows the scan accepts `rg.exe` and `fd.exe` (and the rest of `PATHEXT`). On Debian and Ubuntu, where the package installs `fdfind`, that name is used instead of `fd`.
+`rg` and `fd` are shorter than `grep` and `find`. If neither line is present (a custom system prompt, or a future Pi release that rewords them), the hook returns without changing the prompt. The `before_agent_start` hook is a string replace cached by the prompt text, so the same input always yields the same output.
 
-| On PATH | Bash tool line | Guideline |
-| --- | --- | --- |
-| `rg` and `fd` | `Execute bash commands (ls, rg, fd, etc.)` | `Use bash for file operations like ls, rg, fd` |
-| `rg` only | `Execute bash commands (ls, rg, find, etc.)` | unchanged (it already says `rg`; `find` stays) |
-| `fd` only | `Execute bash commands (ls, grep, fd, etc.)` | `Use bash for file operations like ls, rg, fd` |
-| `fdfind` only | `Execute bash commands (ls, grep, fdfind, etc.)` | `Use bash for file operations like ls, rg, fdfind` |
-| neither | unchanged | unchanged |
+Pi's interactive mode downloads `rg` and `fd` when they are missing, into `~/.pi/agent/bin` (or `$PI_CODING_AGENT_DIR/bin` when that variable is set; a leading `~` is expanded). Bash calls see that directory on `PATH`. The managed files are named `rg` and `fd`, plus `.exe` on Windows.
 
-`rg` and `fd` are shorter than `grep` and `find`. `fdfind` is two characters longer than `find`, which is the Debian binary's name. If neither line is present (a custom system prompt, or a future Pi release that rewords them), the hook returns without changing the prompt.
+Debian and Ubuntu's apt package `fd-find` installs the binary as `fdfind`. Alias it so the rewritten prompt matches a command on `PATH`:
 
-Availability is resolved once, when the extension loads, by stating files on `PATH`. The `before_agent_start` hook is a string replace cached by the prompt text, so the same input always yields the same output.
+```bash
+alias fd=fdfind
+```
 
 ## Prompt text only
 
 `pi-cli-guard` and `pi-prefer-rg` rewrite or block bash commands when the model runs them. `pi-rg-fd` edits the system prompt Pi already built. Commands the model still emits run unchanged.
+
+## Compatibility
+
+With `@earendil-works/pi-coding-agent` installed, `npm run compat` builds Pi's default system prompt from that package and loads this extension through Pi's extension loader. CI runs the same check on Ubuntu and Windows against the latest Pi release, every day and on manual dispatch.
+
+```bash
+npm install --no-save @earendil-works/pi-coding-agent@latest
+npm run compat
+```
 
 ## License
 
