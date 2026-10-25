@@ -1,0 +1,41 @@
+{
+  "name": "pi-rg-fd",
+  "version": "0.1.0",
+  "description": "Pi extension that rewrites the default grep/find prompt lines to rg and fd when those tools are on PATH.",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Li Tianyu",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "extension",
+    "ripgrep",
+    "fd"
+  ],
+  "files": [
+    "index.js",
+    "prompt.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TomXPRIME/pi-rg-fd.git"
+  },
+  "homepage": "https://github.com/TomXPRIME/pi-rg-fd",
+  "bugs": {
+    "url": "https://github.com/TomXPRIME/pi-rg-fd/issues"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "pi": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}
